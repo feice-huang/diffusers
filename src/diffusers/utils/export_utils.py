@@ -386,3 +386,54 @@ def encode_video(
         _write_audio(container, audio_stream, audio, audio_sample_rate, av)
 
     container.close()
+
+
+def concat_video_files(input_paths: list[str], output_path: str) -> None:
+    """
+    Concatenates a list of video files (with matching codec, resolution, and audio configuration) into a single output
+    file using ``ffmpeg`` via ``subprocess``. Tries fast stream-copy first; falls back to re-encoding (libx264 + AAC) if
+    the inputs cannot be concatenated losslessly. Useful for stitching together per-shot outputs of multi-shot pipelines
+    such as ``JoyAIEchoPipeline`` after writing each shot with ``encode_video``.
+
+    Requires the ``ffmpeg`` binary to be available on the system ``PATH``.
+
+    Args:
+        input_paths (`list[str]`):
+            Ordered list of input video file paths to concatenate.
+        output_path (`str`):
+            Path to write the concatenated output to. Existing files are overwritten.
+    """
+    import subprocess
+    import tempfile
+    from pathlib import Path
+
+    if not input_paths:
+        raise ValueError("`input_paths` must contain at least one video path.")
+
+    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as fp:
+        concat_file = Path(fp.name)
+        for p in input_paths:
+            fp.write(f"file '{Path(p).resolve().as_posix()}'\n")
+    try:
+        copy_cmd = [
+            "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+            "-i", str(concat_file), "-c", "copy", str(output_path),
+        ]
+        result = subprocess.run(copy_cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            reencode_cmd = [
+                "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+                "-i", str(concat_file),
+                "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+                "-c:a", "aac", "-b:a", "192k",
+                str(output_path),
+            ]
+            reencode = subprocess.run(reencode_cmd, capture_output=True, text=True)
+            if reencode.returncode != 0:
+                raise RuntimeError(
+                    "ffmpeg concat failed.\n"
+                    f"stream-copy stderr:\n{result.stderr}\n"
+                    f"re-encode stderr:\n{reencode.stderr}"
+                )
+    finally:
+        concat_file.unlink(missing_ok=True)

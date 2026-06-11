@@ -342,7 +342,10 @@ else:
         "LTX2InContextPipeline",
         "LTX2ImageToVideoPipeline",
         "LTX2LatentUpsamplePipeline",
+        "LTX2TextConnectors",
+        "LTX2VocoderWithBWE",
     ]
+    _import_structure["joyai_echo"] = ["JoyAIEchoMemoryBank", "JoyAIEchoPipeline", "JoyAIEchoPipelineOutput"]
     _import_structure["joyimage"] = ["JoyImageEditPipeline", "JoyImageEditPipelineOutput"]
     _import_structure["lumina"] = ["LuminaPipeline", "LuminaText2ImgPipeline"]
     _import_structure["lumina2"] = ["Lumina2Pipeline", "Lumina2Text2ImgPipeline"]
@@ -812,7 +815,10 @@ if TYPE_CHECKING or DIFFUSERS_SLOW_IMPORT:
             LTX2InContextPipeline,
             LTX2LatentUpsamplePipeline,
             LTX2Pipeline,
+            LTX2TextConnectors,
+            LTX2VocoderWithBWE,
         )
+        from .joyai_echo import JoyAIEchoMemoryBank, JoyAIEchoPipeline, JoyAIEchoPipelineOutput
         from .lucy import LucyEditPipeline
         from .lumina import LuminaPipeline, LuminaText2ImgPipeline
         from .lumina2 import Lumina2Pipeline, Lumina2Text2ImgPipeline
